@@ -1,0 +1,11 @@
+[package]
+name = "find_folder"
+version = "0.1.0"
+authors = ["mitchmindtree <mitchell.nordine@gmail.com>"]
+keywords = ["search", "directory", "folder", "find", "dir"]
+description = "A simple tool for finding the absolute path to a folder with a given name."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/PistonDevelopers/find_folder.git"
+homepage = "https://github.com/PistonDevelopers/find_folder"
+

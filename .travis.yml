@@ -1,0 +1,16 @@
+language: rust
+
+rust:
+    - stable
+    - nightly
+
+notifications:
+    irc: "irc.mozilla.org#piston-internals"
+
+script:
+    - cargo build --verbose
+    - cargo test --verbose
+    - cargo doc --verbose
+
+after_success:
+    - curl http://docs.piston.rs/travis-doc-upload.sh | sh
