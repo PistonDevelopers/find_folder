@@ -4,6 +4,26 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 
+/// Depth of recursion through kids.
+pub type KidsDepth = u8;
+/// Depth of recursion through parents.
+pub type ParentsDepth = u8;
+
+/// The direction in which `find_folder` should search for the folder.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum Search {
+    /// Search recursively through parent directories with the given depth.
+    Parents(ParentsDepth),
+    /// Search recursively through children directories with the given depth.
+    Kids(KidsDepth),
+    /// Search in both directions (Parents first, then kids).
+    Both(ParentsDepth, KidsDepth),
+    /// Search parents and then kids (same as `Both`).
+    ParentsThenKids(ParentsDepth, KidsDepth),
+    /// Search kids and then parents.
+    KidsThenParents(KidsDepth, ParentsDepth),
+}
+
 /// If the search was unsuccessful.
 #[derive(Debug)]
 pub enum Error {
@@ -12,6 +32,7 @@ pub enum Error {
     /// The directory requested was not found.
     NotFound,
 }
+
 
 impl ::std::convert::From<io::Error> for Error {
     fn from(io_err: io::Error) -> Error {
@@ -35,18 +56,6 @@ impl ::std::error::Error for Error {
 }
 
 
-/// The direction in which `find_folder` should search for the folder.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Search {
-    /// Search recursively through parent directories with the given depth.
-    Parents(u8),
-    /// Search recursively through children directories with the given depth.
-    Kids(u8),
-    /// Search in both directions (Parents first, then kids).
-    Both(u8, u8),
-}
-
-
 impl Search {
     /// An easy API method for finding a folder with a given name.
     /// i.e. `Search::Kids(u8).for_folder("assets")`
@@ -55,9 +64,16 @@ impl Search {
         match *self {
             Search::Parents(depth) => check_parents(depth, name, &cwd),
             Search::Kids(depth) => check_kids(depth, name, &cwd),
-            Search::Both(parents_depth, kids_depth) => {
+            Search::Both(p_d, k_d) => Search::ParentsThenKids(p_d, k_d).for_folder(name),
+            Search::ParentsThenKids(parents_depth, kids_depth) => {
                 match check_parents(parents_depth, name, &cwd) {
                     Err(Error::NotFound) => check_kids(kids_depth, name, &cwd),
+                    other_result => other_result,
+                }
+            },
+            Search::KidsThenParents(kids_depth, parents_depth) => {
+                match check_kids(kids_depth, name, &cwd) {
+                    Err(Error::NotFound) => check_parents(parents_depth, name, &cwd),
                     other_result => other_result,
                 }
             },
@@ -67,7 +83,7 @@ impl Search {
 
 
 /// Check the contents of this folder and children folders.
-fn check_kids(depth: u8, name: &str, path: &Path) -> Result<PathBuf, Error> {
+pub fn check_kids(depth: u8, name: &str, path: &Path) -> Result<PathBuf, Error> {
     match check_dir(name, path) {
         err @ Err(Error::NotFound) => match depth > 0 {
             true => {
@@ -89,7 +105,7 @@ fn check_kids(depth: u8, name: &str, path: &Path) -> Result<PathBuf, Error> {
 }
 
 /// Check the given path and `depth` number of parent directories for a folder with the given name.
-fn check_parents(depth: u8, name: &str, path: &Path) -> Result<PathBuf, Error> {
+pub fn check_parents(depth: u8, name: &str, path: &Path) -> Result<PathBuf, Error> {
     match check_dir(name, path) {
         err @ Err(Error::NotFound) => match depth > 0 {
             true => match path.parent() {
@@ -103,7 +119,7 @@ fn check_parents(depth: u8, name: &str, path: &Path) -> Result<PathBuf, Error> {
 }
 
 /// Check the given directory for a folder with the matching name.
-fn check_dir(name: &str, path: &Path) -> Result<PathBuf, Error> {
+pub fn check_dir(name: &str, path: &Path) -> Result<PathBuf, Error> {
     for entry in try!(fs::read_dir(path)) {
         let entry = try!(entry);
         let entry_path = entry.path();
