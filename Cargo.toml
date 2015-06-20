@@ -1,7 +1,10 @@
 [package]
 name = "find_folder"
-version = "0.1.1"
-authors = ["mitchmindtree <mitchell.nordine@gmail.com>"]
+version = "0.2.0"
+authors = [
+    "mitchmindtree <mitchell.nordine@gmail.com>",
+    "bvssvni <bvssvni@gmail.com>",
+]
 keywords = ["search", "directory", "folder", "find", "dir"]
 description = "A simple tool for finding the absolute path to a folder with a given name."
 license = "MIT"
