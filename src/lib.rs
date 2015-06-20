@@ -16,8 +16,6 @@ pub enum Search {
     Parents(ParentsDepth),
     /// Search recursively through children directories with the given depth.
     Kids(KidsDepth),
-    /// Search in both directions (Parents first, then kids).
-    Both(ParentsDepth, KidsDepth),
     /// Search parents and then kids (same as `Both`).
     ParentsThenKids(ParentsDepth, KidsDepth),
     /// Search kids and then parents.
@@ -64,7 +62,6 @@ impl Search {
         match *self {
             Search::Parents(depth) => check_parents(depth, name, &cwd),
             Search::Kids(depth) => check_kids(depth, name, &cwd),
-            Search::Both(p_d, k_d) => Search::ParentsThenKids(p_d, k_d).for_folder(name),
             Search::ParentsThenKids(parents_depth, kids_depth) => {
                 match check_parents(parents_depth, name, &cwd) {
                     Err(Error::NotFound) => check_kids(kids_depth, name, &cwd),
