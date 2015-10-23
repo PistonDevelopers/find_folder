@@ -22,6 +22,17 @@ pub enum Search {
     KidsThenParents(KidsDepth, ParentsDepth),
 }
 
+/// A search defined as a starting path and a route to take.
+///
+/// Don't instantiate this type directly. Instead, use `Search::of`.
+#[derive(Clone, Debug)]
+pub struct SearchFolder {
+    /// The starting path of the search.
+    pub start: PathBuf,
+    /// The route to take while searching.
+    pub direction: Search,
+}
+
 /// If the search was unsuccessful.
 #[derive(Debug)]
 pub enum Error {
@@ -57,20 +68,49 @@ impl ::std::error::Error for Error {
 impl Search {
     /// An easy API method for finding a folder with a given name.
     /// i.e. `Search::Kids(u8).for_folder("assets")`
-    pub fn for_folder(&self, name: &str) -> Result<PathBuf, Error> {
+    pub fn for_folder(&self, target: &str) -> Result<PathBuf, Error> {
         let cwd = try!(::std::env::current_dir());
-        match *self {
-            Search::Parents(depth) => check_parents(depth, name, &cwd),
-            Search::Kids(depth) => check_kids(depth, name, &cwd),
+        self.of(cwd).for_folder(target)
+    }
+
+    /// Use this to search in a specific folder.
+    ///
+    /// This method transforms a `Search` into a `SearchFolder`, but that detail is mostly
+    /// irrelevant. See the example for recommended usage.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use find_folder::Search;
+    ///
+    /// let mut exe_folder = std::env::current_exe().unwrap();
+    /// exe_folder.pop(); // Remove the executable's name, leaving the path to the containing folder
+    /// let resource_path = Search::KidsThenParents(1, 2).of(exe_folder).for_folder("resources");
+    /// ```
+    pub fn of(self, start: PathBuf) -> SearchFolder {
+        SearchFolder {
+            start: start,
+            direction: self,
+        }
+    }
+}
+
+
+impl SearchFolder {
+    /// Search for a folder with the given name.
+    pub fn for_folder(&self, target: &str) -> Result<PathBuf, Error> {
+        match self.direction {
+            Search::Parents(depth) => check_parents(depth, target, &self.start),
+            Search::Kids(depth) => check_kids(depth, target, &self.start),
             Search::ParentsThenKids(parents_depth, kids_depth) => {
-                match check_parents(parents_depth, name, &cwd) {
-                    Err(Error::NotFound) => check_kids(kids_depth, name, &cwd),
+                match check_parents(parents_depth, target, &self.start) {
+                    Err(Error::NotFound) => check_kids(kids_depth, target, &self.start),
                     other_result => other_result,
                 }
             },
             Search::KidsThenParents(kids_depth, parents_depth) => {
-                match check_kids(kids_depth, name, &cwd) {
-                    Err(Error::NotFound) => check_parents(parents_depth, name, &cwd),
+                match check_kids(kids_depth, target, &self.start) {
+                    Err(Error::NotFound) => check_parents(parents_depth, target, &self.start),
                     other_result => other_result,
                 }
             },
